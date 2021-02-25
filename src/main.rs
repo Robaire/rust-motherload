@@ -2,10 +2,12 @@ extern crate gl;
 
 extern crate sdl2;
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode::*;
 use sdl2::video::GLProfile;
 
-fn main() {
+use std::time::{Duration, Instant};
 
+fn main() {
     let initial_window_size = 0.5;
 
     // Initialize SDL and create a window
@@ -64,27 +66,61 @@ fn main() {
         (sdl_context, window, gl_context, video_subsystem)
     };
 
+    let mut position = (0.0, 0.0);
+    let mut velocity = (0.0, 0.0);
+    let mut acceleration = (0.0, 0.0);
+
+    let max_velocity = (1.0, 1.0);
+
+    let mut then = std::time::Instant::now();
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
+
         // Clear the event queue
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'main_loop,
+                Event::KeyDown { keycode, .. } => match keycode.unwrap() {
+                    W => velocity.1 = 1.0,
+                    A => velocity.0 = -1.0,
+                    S => velocity.1 = -1.0,
+                    D => velocity.0 = 1.0,
+                    _ => {}
+                },
+                Event::KeyUp { keycode, .. } => match keycode.unwrap() {
+                    W | S => velocity.1 = 0.0,
+                    A | D => velocity.0 = 0.0,
+                    _ => {}
+                },
                 _ => {}
             };
         }
 
+        // Calculate the delta time
+        let now = Instant::now();
+        let delta_time = (now - then).as_secs_f64();
+        then = now;
+
+        println!("Delta T: {}", delta_time);
+        println!("Cycles / Second: {}", 1.0 / delta_time);
+
+        // Integrate new state given input
+        position.0 += velocity.0;
+        position.1 += velocity.1;
+
+        println!("({}, {})", position.0, position.1);
+
+        // Draw the new state to the screen
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
         // Swap the buffers
-        window.gl_swap_window();
+        window.gl_swap_window(); // This might wait in order to synchronize with the display refresh rate!!!!
 
         let sleep_time = std::time::Duration::from_millis(5);
         std::thread::sleep(sleep_time);
     }
-
 }
