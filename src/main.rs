@@ -67,24 +67,6 @@ fn main() {
         (sdl_context, window, gl_context, video_subsystem)
     };
 
-    // Physics
-    let mut position = (0.0, 0.0); // m
-    let mut velocity = (0.0, 0.0); // m/s
-    let mut acceleration = (0.0, 0.0); // m/s^2
-
-    let max_velocity = (1.0, 1.0);
-
-    let mut now = std::time::Instant::now();
-    let mut then = now;
-    let mut delta_time = (now - then).as_secs_f64();
-
-    // TODO: Make work
-    let mut tick = || {
-        now = std::time::Instant::now();
-        delta_time = (now - then).as_secs_f64();
-        then = now;
-    };
-
     #[derive(Eq, PartialEq, Hash)]
     enum Command {
         Exit,
@@ -117,6 +99,25 @@ fn main() {
     inputs.insert(Keycode::Space, Command::Interact);
     inputs.shrink_to_fit();
 
+    // Time
+    let mut now = std::time::Instant::now();
+    let mut then = now;
+
+    // Calculates Delta-Time
+    let mut tick = || {
+        now = std::time::Instant::now();
+        let delta_time = (now - then).as_secs_f64();
+        then = now;
+        return delta_time;
+    };
+
+    // Physics
+    let mut position = (0.0, 0.0); // m
+    let mut velocity = (0.0, 0.0); // m/s
+    let mut acceleration = (0.0, 0.0); // m/s^2
+
+    let max_velocity = (1.0, 1.0);
+
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
@@ -145,10 +146,7 @@ fn main() {
         }
 
         // Calculate the delta time
-        now = Instant::now();
-        delta_time = (now - then).as_secs_f64();
-        then = now;
-        // tick();
+        let delta_time = tick();
 
         println!("Delta T: {}", delta_time);
         println!("Cycles / Second: {}", 1.0 / delta_time);
