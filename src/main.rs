@@ -78,16 +78,16 @@ fn main() {
     let mut then = now;
     let mut delta_time = (now - then).as_secs_f64();
 
-    // let mut tick = || {
-    //     now = std::time::Instant::now();
-    //     delta_time = (now - then).as_secs_f64();
-    //     then = now;
-    // };
-
-    let accel = 0.1;
+    // TODO: Make work
+    let mut tick = || {
+        now = std::time::Instant::now();
+        delta_time = (now - then).as_secs_f64();
+        then = now;
+    };
 
     #[derive(Eq, PartialEq, Hash)]
     enum Command {
+        Exit,
         Right,
         Left,
         Up,
@@ -96,6 +96,7 @@ fn main() {
     }
 
     let mut commands: HashMap<Command, bool> = HashMap::new();
+    commands.insert(Command::Exit, false);
     commands.insert(Command::Right, false);
     commands.insert(Command::Left, false);
     commands.insert(Command::Up, false);
@@ -104,6 +105,7 @@ fn main() {
     commands.shrink_to_fit();
 
     let mut inputs: HashMap<Keycode, Command> = HashMap::new();
+    inputs.insert(Keycode::E, Command::Exit);
     inputs.insert(Keycode::W, Command::Up);
     inputs.insert(Keycode::Up, Command::Up);
     inputs.insert(Keycode::S, Command::Down);
