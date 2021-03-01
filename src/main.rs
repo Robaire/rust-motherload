@@ -2,16 +2,17 @@ extern crate gl;
 
 extern crate sdl2;
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode::*;
+use sdl2::keyboard::Keycode;
 use sdl2::video::GLProfile;
 
+use std::collections::HashMap;
 use std::time::Instant;
 
 fn main() {
     let initial_window_size = 0.5;
 
     // Initialize SDL and create a window
-    let (sdl_context, window, _gl_context, video_subsystem) = {
+    let (sdl_context, window, _gl_context, _video_subsystem) = {
         // Initialize SDL
         let sdl_context = match sdl2::init() {
             Ok(context) => context,
@@ -68,7 +69,7 @@ fn main() {
 
     // Physics
     let mut position = (0.0, 0.0); // m
-    let mut velocity = (0.0, 0.0); // m/s 
+    let mut velocity = (0.0, 0.0); // m/s
     let mut acceleration = (0.0, 0.0); // m/s^2
 
     let max_velocity = (1.0, 1.0);
@@ -77,77 +78,87 @@ fn main() {
     let mut then = now;
     let mut delta_time = (now - then).as_secs_f64();
 
-    // Update the physics state with the input
-    let mut compute_physics = || {
-
-        // Integrate acceleration into velocity
-        velocity.0 += acceleration.0 * delta_time;
-        velocity.1 += (acceleration.1 - 9.81)* delta_time;
-
-        velocity.0 = if velocity.0 > max_velocity.0 {max_velocity.0} else {velocity.0};
-        velocity.1 = if velocity.1 > max_velocity.1 {max_velocity.1} else {velocity.1};
-        velocity.0 = if velocity.0 < -max_velocity.0 {-max_velocity.0} else {velocity.0};
-        velocity.1 = if velocity.1 < -max_velocity.1 {-max_velocity.1} else {velocity.1};
-
-        // Integrate velocity into position
-        position.0 += velocity.0 * delta_time;
-        position.1 += velocity.1 * delta_time;
-
-    };
+    // let mut tick = || {
+    //     now = std::time::Instant::now();
+    //     delta_time = (now - then).as_secs_f64();
+    //     then = now;
+    // };
 
     let accel = 0.1;
+
+    #[derive(Eq, PartialEq, Hash)]
+    enum Command {
+        Right,
+        Left,
+        Up,
+        Down,
+        Interact,
+    }
+
+    let mut commands: HashMap<Command, bool> = HashMap::new();
+    commands.insert(Command::Right, false);
+    commands.insert(Command::Left, false);
+    commands.insert(Command::Up, false);
+    commands.insert(Command::Down, false);
+    commands.insert(Command::Interact, false);
+    commands.shrink_to_fit();
+
+    let mut inputs: HashMap<Keycode, Command> = HashMap::new();
+    inputs.insert(Keycode::W, Command::Up);
+    inputs.insert(Keycode::Up, Command::Up);
+    inputs.insert(Keycode::S, Command::Down);
+    inputs.insert(Keycode::Down, Command::Down);
+    inputs.insert(Keycode::A, Command::Left);
+    inputs.insert(Keycode::Left, Command::Left);
+    inputs.insert(Keycode::D, Command::Right);
+    inputs.insert(Keycode::Right, Command::Right);
+    inputs.insert(Keycode::Space, Command::Interact);
+    inputs.shrink_to_fit();
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
-
         // Clear the event queue
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'main_loop,
-                Event::KeyDown { keycode, .. } => match keycode.unwrap() {
-                    W => acceleration.1 = accel,
-                    A => acceleration.0 = -accel,
-                    S => acceleration.1 = -accel,
-                    D => acceleration.0 = accel,
-                    _ => {}
+                Event::KeyDown { keycode, .. } => match inputs.get(&keycode.unwrap()) {
+                    Some(command) => match commands.get_mut(&command) {
+                        Some(state) => *state = true,
+                        None => {}
+                    },
+                    None => {
+                        println!("The {} key does not do anything!", keycode.unwrap());
+                    }
                 },
-                Event::KeyUp { keycode, .. } => match keycode.unwrap() {
-                    W | S => acceleration.1 = 0.0,
-                    A | D => acceleration.0 = 0.0,
-                    _ => {}
+                Event::KeyUp { keycode, .. } => match inputs.get(&keycode.unwrap()) {
+                    Some(command) => match commands.get_mut(&command) {
+                        Some(state) => *state = false,
+                        None => {}
+                    },
+                    None => {}
                 },
                 _ => {}
-            };
+            }
         }
 
         // Calculate the delta time
         now = Instant::now();
         delta_time = (now - then).as_secs_f64();
         then = now;
+        // tick();
 
         println!("Delta T: {}", delta_time);
         println!("Cycles / Second: {}", 1.0 / delta_time);
 
         // Integrate new state given input
 
-        // Integrate acceleration into velocity
-        velocity.0 += acceleration.0 * delta_time;
-        velocity.1 += (acceleration.1 - 9.81)* delta_time;
-
-        velocity.0 = if velocity.0 > max_velocity.0 {max_velocity.0} else {velocity.0};
-        velocity.1 = if velocity.1 > max_velocity.1 {max_velocity.1} else {velocity.1};
-        velocity.0 = if velocity.0 < -max_velocity.0 {-max_velocity.0} else {velocity.0};
-        velocity.1 = if velocity.1 < -max_velocity.1 {-max_velocity.1} else {velocity.1};
-
-        // Integrate velocity into position
-        position.0 += velocity.0 * delta_time;
-        position.1 += velocity.1 * delta_time;
-
+        // Print out state for debug
         println!("Position: ({}, {})", position.0, position.1);
         println!("Velocity: ({}, {})", velocity.0, velocity.1);
         println!("Acceleration: ({}, {})", acceleration.0, acceleration.1);
 
+        println!("Up: {}", commands.get(&Command::Up).unwrap());
 
         // Draw the new state to the screen
         unsafe {
