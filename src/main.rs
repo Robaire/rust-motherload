@@ -8,6 +8,23 @@ use sdl2::video::GLProfile;
 use std::collections::HashMap;
 use std::time::Instant;
 
+use rand::prelude::*;
+
+enum OreType {
+    Copper,
+    Iron,
+    Gold,
+    Titanium,
+}
+
+enum TileType {
+    Air,
+    Regolith,
+    Boulder,
+    Treasure,
+    Ore(OreType),
+}
+
 fn main() {
     let initial_window_size = 0.5;
 
@@ -88,6 +105,7 @@ fn main() {
 
     let mut inputs: HashMap<Keycode, Command> = HashMap::new();
     inputs.insert(Keycode::E, Command::Exit);
+    inputs.insert(Keycode::Escape, Command::Exit);
     inputs.insert(Keycode::W, Command::Up);
     inputs.insert(Keycode::Up, Command::Up);
     inputs.insert(Keycode::S, Command::Down);
@@ -99,12 +117,32 @@ fn main() {
     inputs.insert(Keycode::Space, Command::Interact);
     inputs.shrink_to_fit();
 
+    let world_size = (50, 10); // Size of the world in tiles
+
+    let mut tiles: Vec<TileType> = Vec::with_capacity(world_size.0 * world_size.1);
+    /*
+     * Each tile is the same size, 1 square meter
+     * Data to keep track of:
+     *      - Tile type: air, dirt, rock, treasure, ore,
+     *      - Position (but this can be determined by its place in the array?)
+     *      - Point value (but that can be determined by its type)
+     */
+
+    for i in 0..(world_size.0 * world_size.1) {
+        
+        if rand::random() {
+            tiles.push(TileType::Regolith);
+        } else {
+            tiles.push(TileType::Air);
+        }
+    }
+
     // Time
-    let mut now = std::time::Instant::now();
+    let mut now = Instant::now();
     let mut then = now;
 
     // Calculates Delta-Time
-    let mut tick = || {
+    let mut tick = || -> f64 {
         now = std::time::Instant::now();
         let delta_time = (now - then).as_secs_f64();
         then = now;
@@ -113,10 +151,8 @@ fn main() {
 
     // Physics
     let mut position = (0.0, 0.0); // m
-    let mut velocity = (0.0, 0.0); // m/s
-    let mut acceleration = (0.0, 0.0); // m/s^2
 
-    let max_velocity = (1.0, 1.0);
+    let mut physics = |delta_time: f64| -> (f32, f32) { (1.0, 1.0) };
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -148,17 +184,15 @@ fn main() {
         // Calculate the delta time
         let delta_time = tick();
 
-        println!("Delta T: {}", delta_time);
-        println!("Cycles / Second: {}", 1.0 / delta_time);
-
-        // Integrate new state given input
+        // println!("Delta T: {}", delta_time);
+        // println!("Cycles / Second: {}", 1.0 / delta_time);
 
         // Print out state for debug
-        println!("Position: ({}, {})", position.0, position.1);
-        println!("Velocity: ({}, {})", velocity.0, velocity.1);
-        println!("Acceleration: ({}, {})", acceleration.0, acceleration.1);
+        position = physics(delta_time);
 
-        println!("Up: {}", commands.get(&Command::Up).unwrap());
+        // println!("Position: ({}, {})", position.0, position.1);
+
+        print_world(world_size, &tiles);
 
         // Draw the new state to the screen
         unsafe {
@@ -170,5 +204,22 @@ fn main() {
 
         let sleep_time = std::time::Duration::from_millis(5);
         std::thread::sleep(sleep_time);
+    }
+}
+
+fn print_world(world_size: (usize, usize), tiles: &Vec<TileType>) {
+    println!("World:");
+
+    for y in 0..world_size.1 {
+        for x in 0..world_size.0 {
+            match &tiles[y * world_size.0 + x] {
+                TileType::Air => print!("."),
+                TileType::Regolith => print!("#"),
+                TileType::Boulder => print!("B"),
+                TileType::Ore(_) => print!("O"),
+                TileType::Treasure => print!("T"),
+            }
+        }
+        println!();
     }
 }
