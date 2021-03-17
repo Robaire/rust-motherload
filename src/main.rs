@@ -214,7 +214,7 @@ fn main() {
         if position.0 < 0.0 {
             position.0 = 0.0;
         }
-        
+
         if position.1 as usize >= world_size.1 - 1 {
             position.1 = (world_size.1 - 1) as f32;
         }
@@ -223,7 +223,10 @@ fn main() {
             position.1 = 0.0;
         }
 
-        if tiles.get(position.1 as usize * world_size.0 + position.0 as usize).is_some() {
+        if tiles
+            .get(position.1 as usize * world_size.0 + position.0 as usize)
+            .is_some()
+        {
             tiles[position.1 as usize * world_size.0 + position.0 as usize] = TileType::Air;
         }
 
