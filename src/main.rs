@@ -130,11 +130,12 @@ fn main() {
      */
 
     for i in 0..(world_size.0 * world_size.1) {
-        if rand::random() {
-            tiles.push(TileType::Regolith);
-        } else {
-            tiles.push(TileType::Air);
-        }
+        tiles.push(TileType::Regolith);
+        // if rand::random() {
+        //     tiles.push(TileType::Regolith);
+        // } else {
+        //     tiles.push(TileType::Air);
+        // }
     }
 
     // Time
@@ -152,9 +153,7 @@ fn main() {
     // Physics
     let mut position = (0.0, 0.0); // m
 
-    let physics = |delta_time: f64| -> (f32, f32) {
-        (0.0, 0.0)
-    };
+    let physics = |delta_time: f64| -> (f32, f32) { (0.0, 0.0) };
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -207,6 +206,27 @@ fn main() {
         if *commands.get(&Command::Down).unwrap() {
             position.1 += 1.0;
         }
+
+        if position.0 as usize >= world_size.0 - 1 {
+            position.0 = (world_size.0 - 1) as f32;
+        }
+
+        if position.0 < 0.0 {
+            position.0 = 0.0;
+        }
+        
+        if position.1 as usize >= world_size.1 - 1 {
+            position.1 = (world_size.1 - 1) as f32;
+        }
+
+        if position.1 < 0.0 {
+            position.1 = 0.0;
+        }
+
+        if tiles.get(position.1 as usize * world_size.0 + position.0 as usize).is_some() {
+            tiles[position.1 as usize * world_size.0 + position.0 as usize] = TileType::Air;
+        }
+
         // println!("Position: ({}, {})", position.0, position.1);
         print_world(world_size, position, &tiles);
 
