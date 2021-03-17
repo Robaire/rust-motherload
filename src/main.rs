@@ -117,7 +117,8 @@ fn main() {
     inputs.insert(Keycode::Space, Command::Interact);
     inputs.shrink_to_fit();
 
-    let world_size = (50, 10); // Size of the world in tiles
+    // Size of the world (x, y)
+    let world_size = (10, 5);
 
     let mut tiles: Vec<TileType> = Vec::with_capacity(world_size.0 * world_size.1);
     /*
@@ -129,7 +130,6 @@ fn main() {
      */
 
     for i in 0..(world_size.0 * world_size.1) {
-        
         if rand::random() {
             tiles.push(TileType::Regolith);
         } else {
@@ -152,7 +152,9 @@ fn main() {
     // Physics
     let mut position = (0.0, 0.0); // m
 
-    let mut physics = |delta_time: f64| -> (f32, f32) { (1.0, 1.0) };
+    let physics = |delta_time: f64| -> (f32, f32) {
+        (0.0, 0.0)
+    };
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -188,11 +190,25 @@ fn main() {
         // println!("Cycles / Second: {}", 1.0 / delta_time);
 
         // Print out state for debug
-        position = physics(delta_time);
+        // position = physics(delta_time, position);
 
+        if *commands.get(&Command::Right).unwrap() {
+            position.0 += 1.0;
+        }
+
+        if *commands.get(&Command::Left).unwrap() {
+            position.0 -= 1.0;
+        }
+
+        if *commands.get(&Command::Up).unwrap() {
+            position.1 -= 1.0;
+        }
+
+        if *commands.get(&Command::Down).unwrap() {
+            position.1 += 1.0;
+        }
         // println!("Position: ({}, {})", position.0, position.1);
-
-        print_world(world_size, &tiles);
+        print_world(world_size, position, &tiles);
 
         // Draw the new state to the screen
         unsafe {
@@ -207,19 +223,24 @@ fn main() {
     }
 }
 
-fn print_world(world_size: (usize, usize), tiles: &Vec<TileType>) {
+fn print_world(world_size: (usize, usize), position: (f32, f32), tiles: &Vec<TileType>) {
     println!("World:");
 
     for y in 0..world_size.1 {
         for x in 0..world_size.0 {
-            match &tiles[y * world_size.0 + x] {
-                TileType::Air => print!("."),
-                TileType::Regolith => print!("#"),
-                TileType::Boulder => print!("B"),
-                TileType::Ore(_) => print!("O"),
-                TileType::Treasure => print!("T"),
+            if y == position.1 as usize && x == position.0 as usize {
+                print!("M");
+            } else {
+                match &tiles[y * world_size.0 + x] {
+                    TileType::Air => print!("."),
+                    TileType::Regolith => print!("#"),
+                    TileType::Boulder => print!("B"),
+                    TileType::Ore(_) => print!("O"),
+                    TileType::Treasure => print!("T"),
+                }
             }
         }
         println!();
     }
+    println!();
 }
