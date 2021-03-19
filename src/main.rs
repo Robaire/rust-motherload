@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use rand::prelude::*;
+use std::cell::{Cell, RefCell};
 
 enum OreType {
     Copper,
@@ -94,14 +95,17 @@ fn main() {
         Interact,
     }
 
-    let mut commands: HashMap<Command, bool> = HashMap::new();
-    commands.insert(Command::Exit, false);
-    commands.insert(Command::Right, false);
-    commands.insert(Command::Left, false);
-    commands.insert(Command::Up, false);
-    commands.insert(Command::Down, false);
-    commands.insert(Command::Interact, false);
-    commands.shrink_to_fit();
+    let commands: RefCell<HashMap<Command, bool>> = RefCell::new(HashMap::new());
+    {
+        let mut c = commands.borrow_mut();
+        c.insert(Command::Exit, false);
+        c.insert(Command::Right, false);
+        c.insert(Command::Left, false);
+        c.insert(Command::Up, false);
+        c.insert(Command::Down, false);
+        c.insert(Command::Interact, false);
+        c.shrink_to_fit();
+    }
 
     let mut inputs: HashMap<Keycode, Command> = HashMap::new();
     inputs.insert(Keycode::E, Command::Exit);
@@ -119,8 +123,10 @@ fn main() {
 
     // Size of the world (x, y)
     let world_size = (10, 5);
+    let score: Cell<u64> = Cell::new(0);
 
-    let mut tiles: Vec<TileType> = Vec::with_capacity(world_size.0 * world_size.1);
+    let tiles: RefCell<Vec<TileType>> =
+        RefCell::new(Vec::with_capacity(world_size.0 * world_size.1));
     /*
      * Each tile is the same size, 1 square meter
      * Data to keep track of:
@@ -130,7 +136,7 @@ fn main() {
      */
 
     for i in 0..(world_size.0 * world_size.1) {
-        tiles.push(TileType::Regolith);
+        tiles.borrow_mut().push(TileType::Regolith);
         // if rand::random() {
         //     tiles.push(TileType::Regolith);
         // } else {
@@ -141,19 +147,65 @@ fn main() {
     // Time
     let mut now = Instant::now();
     let mut then = now;
+    let delta_time: Cell<f64> = Cell::new(0.0);
 
     // Calculates Delta-Time
-    let mut tick = || -> f64 {
+    let mut tick = || {
         now = std::time::Instant::now();
-        let delta_time = (now - then).as_secs_f64();
+        delta_time.set((now - then).as_secs_f64());
         then = now;
-        return delta_time;
     };
 
     // Physics
-    let mut position = (0.0, 0.0); // m
+    let mut position: Cell<(f32, f32)> = Cell::new((0.0, 0.0)); // m
 
-    let physics = |delta_time: f64| -> (f32, f32) { (0.0, 0.0) };
+    let physics = || {
+        let c = commands.borrow();
+        let mut p = position.get();
+
+        if *c.get(&Command::Right).unwrap() {
+            p.0 += 1.0;
+        }
+
+        if *c.get(&Command::Left).unwrap() {
+            p.0 -= 1.0;
+        }
+
+        if *c.get(&Command::Up).unwrap() {
+            p.1 -= 1.0;
+        }
+
+        if *c.get(&Command::Down).unwrap() {
+            p.1 += 1.0;
+        }
+
+        if p.0 as usize >= world_size.0 - 1 {
+            p.0 = (world_size.0 - 1) as f32;
+        }
+
+        if p.0 < 0.0 {
+            p.0 = 0.0;
+        }
+
+        if p.1 as usize >= world_size.1 - 1 {
+            p.1 = (world_size.1 - 1) as f32;
+        }
+
+        if p.1 < 0.0 {
+            p.1 = 0.0;
+        }
+
+        position.set(p);
+    };
+
+    let update_board = || {
+        let mut t = tiles.borrow_mut();
+        let p = position.get();
+
+        if t.get(p.1 as usize * world_size.0 + p.0 as usize).is_some() {
+            t[p.1 as usize * world_size.0 + p.0 as usize] = TileType::Air;
+        }
+    };
 
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -163,7 +215,7 @@ fn main() {
             match event {
                 Event::Quit { .. } => break 'main_loop,
                 Event::KeyDown { keycode, .. } => match inputs.get(&keycode.unwrap()) {
-                    Some(command) => match commands.get_mut(&command) {
+                    Some(command) => match commands.borrow_mut().get_mut(&command) {
                         Some(state) => *state = true,
                         None => {}
                     },
@@ -172,7 +224,7 @@ fn main() {
                     }
                 },
                 Event::KeyUp { keycode, .. } => match inputs.get(&keycode.unwrap()) {
-                    Some(command) => match commands.get_mut(&command) {
+                    Some(command) => match commands.borrow_mut().get_mut(&command) {
                         Some(state) => *state = false,
                         None => {}
                     },
@@ -183,55 +235,14 @@ fn main() {
         }
 
         // Calculate the delta time
-        let delta_time = tick();
+        tick();
 
         // println!("Delta T: {}", delta_time);
         // println!("Cycles / Second: {}", 1.0 / delta_time);
 
-        // Print out state for debug
-        // position = physics(delta_time, position);
-
-        if *commands.get(&Command::Right).unwrap() {
-            position.0 += 1.0;
-        }
-
-        if *commands.get(&Command::Left).unwrap() {
-            position.0 -= 1.0;
-        }
-
-        if *commands.get(&Command::Up).unwrap() {
-            position.1 -= 1.0;
-        }
-
-        if *commands.get(&Command::Down).unwrap() {
-            position.1 += 1.0;
-        }
-
-        if position.0 as usize >= world_size.0 - 1 {
-            position.0 = (world_size.0 - 1) as f32;
-        }
-
-        if position.0 < 0.0 {
-            position.0 = 0.0;
-        }
-
-        if position.1 as usize >= world_size.1 - 1 {
-            position.1 = (world_size.1 - 1) as f32;
-        }
-
-        if position.1 < 0.0 {
-            position.1 = 0.0;
-        }
-
-        if tiles
-            .get(position.1 as usize * world_size.0 + position.0 as usize)
-            .is_some()
-        {
-            tiles[position.1 as usize * world_size.0 + position.0 as usize] = TileType::Air;
-        }
-
-        // println!("Position: ({}, {})", position.0, position.1);
-        print_world(world_size, position, &tiles);
+        physics();
+        update_board();
+        print_world(world_size, position.get(), &tiles.borrow());
 
         // Draw the new state to the screen
         unsafe {
