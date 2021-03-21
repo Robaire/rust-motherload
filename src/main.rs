@@ -158,8 +158,11 @@ fn main() {
 
     // Physics
     let mut position: Cell<(f32, f32)> = Cell::new((0.0, 0.0)); // m
-
+    
     let physics = || {
+    };
+
+    let actions = || {
         let c = commands.borrow();
         let mut p = position.get();
 
@@ -198,7 +201,7 @@ fn main() {
         position.set(p);
     };
 
-    let update_board = || {
+    let update = || {
         let mut t = tiles.borrow_mut();
         let p = position.get();
         let tile_index = p.1 as usize * world_size.0 + p.0 as usize;
@@ -206,16 +209,22 @@ fn main() {
 
         // If this happens something went wrong
         if t.get(tile_index).is_none() {
-            panic!("Tile Index is none existent!");
+            panic!("Tile index is none existent!");
         }
 
-        match t.get(tile_index).unwrap() {
-            TileType::Air => {},
-            TileType::Regolith => s += 10,
-            TileType::Treasure => s += 100,
-            TileType::Ore(ore_type) => s += 50,
-            _ => {}
-        }
+        // Update the score
+        s += match t.get(tile_index).unwrap() {
+            TileType::Regolith => 10,
+            TileType::Treasure => 500,
+            TileType::Ore(ore_type) => match ore_type {
+                OreType::Copper => 15,
+                OreType::Iron => 25,
+                OreType::Gold => 50,
+                OreType::Titanium => 100,
+                _ => 0,
+            },
+            _ => 0,
+        };
 
         // Update the score
         score.set(s);
@@ -258,7 +267,8 @@ fn main() {
         // println!("Cycles / Second: {}", 1.0 / delta_time);
 
         physics();
-        update_board();
+        actions();
+        update();
         print_world(world_size, position.get(), score.get(), &tiles.borrow());
 
         // Draw the new state to the screen
@@ -274,7 +284,12 @@ fn main() {
     }
 }
 
-fn print_world(world_size: (usize, usize), position: (f32, f32), score: u64, tiles: &Vec<TileType>) {
+fn print_world(
+    world_size: (usize, usize),
+    position: (f32, f32),
+    score: u64,
+    tiles: &Vec<TileType>,
+) {
     println!("World: {}", score);
 
     for y in 0..world_size.1 {
