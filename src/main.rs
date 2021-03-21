@@ -8,8 +8,9 @@ use sdl2::video::GLProfile;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use rand::prelude::*;
 use std::cell::{Cell, RefCell};
+use rand::{Rng, SeedableRng};
+use rand::rngs::SmallRng;
 
 enum OreType {
     Copper,
@@ -134,14 +135,19 @@ fn main() {
      *      - Position (but this can be determined by its place in the array?)
      *      - Point value (but that can be determined by its type)
      */
-
+    
+    let mut rng = SmallRng::from_entropy();
     for i in 0..(world_size.0 * world_size.1) {
-        tiles.borrow_mut().push(TileType::Regolith);
-        // if rand::random() {
-        //     tiles.push(TileType::Regolith);
-        // } else {
-        //     tiles.push(TileType::Air);
-        // }
+
+        let val: f32 = rng.gen();
+
+        if val < 0.1 {
+            tiles.borrow_mut().push(TileType::Treasure);
+        } else if val >= 0.1 && val < 0.5 {
+            tiles.borrow_mut().push(TileType::Ore(OreType::Copper));
+        } else if val >= 0.5 {
+            tiles.borrow_mut().push(TileType::Regolith);
+        }
     }
 
     // Time
@@ -158,9 +164,8 @@ fn main() {
 
     // Physics
     let mut position: Cell<(f32, f32)> = Cell::new((0.0, 0.0)); // m
-    
-    let physics = || {
-    };
+
+    let physics = || {};
 
     let actions = || {
         let c = commands.borrow();
