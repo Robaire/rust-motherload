@@ -201,10 +201,27 @@ fn main() {
     let update_board = || {
         let mut t = tiles.borrow_mut();
         let p = position.get();
+        let tile_index = p.1 as usize * world_size.0 + p.0 as usize;
+        let mut s = score.get();
 
-        if t.get(p.1 as usize * world_size.0 + p.0 as usize).is_some() {
-            t[p.1 as usize * world_size.0 + p.0 as usize] = TileType::Air;
+        // If this happens something went wrong
+        if t.get(tile_index).is_none() {
+            panic!("Tile Index is none existent!");
         }
+
+        match t.get(tile_index).unwrap() {
+            TileType::Air => {},
+            TileType::Regolith => s += 10,
+            TileType::Treasure => s += 100,
+            TileType::Ore(ore_type) => s += 50,
+            _ => {}
+        }
+
+        // Update the score
+        score.set(s);
+
+        // Set the tile to air
+        t[tile_index] = TileType::Air;
     };
 
     // Enter the main event loop
@@ -242,7 +259,7 @@ fn main() {
 
         physics();
         update_board();
-        print_world(world_size, position.get(), &tiles.borrow());
+        print_world(world_size, position.get(), score.get(), &tiles.borrow());
 
         // Draw the new state to the screen
         unsafe {
@@ -257,8 +274,8 @@ fn main() {
     }
 }
 
-fn print_world(world_size: (usize, usize), position: (f32, f32), tiles: &Vec<TileType>) {
-    println!("World:");
+fn print_world(world_size: (usize, usize), position: (f32, f32), score: u64, tiles: &Vec<TileType>) {
+    println!("World: {}", score);
 
     for y in 0..world_size.1 {
         for x in 0..world_size.0 {
