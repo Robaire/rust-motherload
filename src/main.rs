@@ -203,6 +203,10 @@ fn main() {
             p.1 = 0.0;
         }
 
+        if p != position.get() {
+            fuel.set(fuel.get() - 10);
+        }
+
         position.set(p);
     };
 
@@ -236,6 +240,12 @@ fn main() {
 
         // Set the tile to air
         t[tile_index] = TileType::Air;
+        
+        if fuel.get() == 0 {
+            println!("You ran out of fuel!");
+            std::process::exit(0);
+        }
+
     };
 
     let print_world = || {
