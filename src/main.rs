@@ -8,24 +8,9 @@ use sdl2::video::GLProfile;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use std::cell::{Cell, RefCell};
-use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
-
-enum OreType {
-    Copper,
-    Iron,
-    Gold,
-    Titanium,
-}
-
-enum TileType {
-    Air,
-    Regolith,
-    Boulder,
-    Treasure,
-    Ore(OreType),
-}
+use rand::{Rng, SeedableRng};
+use std::cell::{Cell, RefCell};
 
 fn main() {
     let initial_window_size = 0.5;
@@ -122,9 +107,25 @@ fn main() {
     inputs.insert(Keycode::Space, Command::Interact);
     inputs.shrink_to_fit();
 
+    enum OreType {
+        Copper,
+        Iron,
+        Gold,
+        Titanium,
+    }
+
+    enum TileType {
+        Air,
+        Regolith,
+        Boulder,
+        Treasure,
+        Ore(OreType),
+    }
+
     // Size of the world (x, y)
     let world_size = (10, 5);
     let score: Cell<u64> = Cell::new(0);
+    let fuel: Cell<u64> = Cell::new(100);
 
     let tiles: RefCell<Vec<TileType>> =
         RefCell::new(Vec::with_capacity(world_size.0 * world_size.1));
@@ -135,10 +136,9 @@ fn main() {
      *      - Position (but this can be determined by its place in the array?)
      *      - Point value (but that can be determined by its type)
      */
-    
+
     let mut rng = SmallRng::from_entropy();
     for i in 0..(world_size.0 * world_size.1) {
-
         let val: f32 = rng.gen();
 
         if val < 0.1 {
@@ -238,6 +238,30 @@ fn main() {
         t[tile_index] = TileType::Air;
     };
 
+    let print_world = || {
+        println!("Score: {}, Fuel: {}", score.get(), fuel.get());
+        let position = position.get();
+        let tiles = tiles.borrow();
+
+        for y in 0..world_size.1 {
+            for x in 0..world_size.0 {
+                if y == position.1 as usize && x == position.0 as usize {
+                    print!("M");
+                } else {
+                    match &tiles[y * world_size.0 + x] {
+                        TileType::Air => print!("."),
+                        TileType::Regolith => print!("#"),
+                        TileType::Boulder => print!("B"),
+                        TileType::Ore(_) => print!("O"),
+                        TileType::Treasure => print!("T"),
+                    }
+                }
+            }
+            println!();
+        }
+        println!();
+    };
+
     // Enter the main event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
@@ -274,7 +298,7 @@ fn main() {
         physics();
         actions();
         update();
-        print_world(world_size, position.get(), score.get(), &tiles.borrow());
+        print_world();
 
         // Draw the new state to the screen
         unsafe {
@@ -287,31 +311,4 @@ fn main() {
         let sleep_time = std::time::Duration::from_millis(5);
         std::thread::sleep(sleep_time);
     }
-}
-
-fn print_world(
-    world_size: (usize, usize),
-    position: (f32, f32),
-    score: u64,
-    tiles: &Vec<TileType>,
-) {
-    println!("World: {}", score);
-
-    for y in 0..world_size.1 {
-        for x in 0..world_size.0 {
-            if y == position.1 as usize && x == position.0 as usize {
-                print!("M");
-            } else {
-                match &tiles[y * world_size.0 + x] {
-                    TileType::Air => print!("."),
-                    TileType::Regolith => print!("#"),
-                    TileType::Boulder => print!("B"),
-                    TileType::Ore(_) => print!("O"),
-                    TileType::Treasure => print!("T"),
-                }
-            }
-        }
-        println!();
-    }
-    println!();
 }
