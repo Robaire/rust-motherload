@@ -1,5 +1,5 @@
 extern crate gl;
-use gl::types::{GLenum, GLuint};
+use gl::types::GLenum;
 
 use super::gl_util;
 
@@ -8,7 +8,6 @@ use super::gl_util;
 /// `source` - The shader source code string
 /// `kind` - The kind of shader to create
 pub fn new_from_string(source: String, kind: GLenum) -> Result<u32, String> {
-
     // Create a shader
     let shader_id = gl_util::create_shader(kind)?;
 
