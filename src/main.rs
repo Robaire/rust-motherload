@@ -12,6 +12,10 @@ use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use std::cell::{Cell, RefCell};
 
+pub mod gl_util;
+pub mod shader;
+pub mod text;
+
 fn main() {
     let initial_window_size = 0.5;
 
@@ -240,12 +244,11 @@ fn main() {
 
         // Set the tile to air
         t[tile_index] = TileType::Air;
-        
+
         if fuel.get() == 0 {
             println!("You ran out of fuel!");
             std::process::exit(0);
         }
-
     };
 
     let print_world = || {
