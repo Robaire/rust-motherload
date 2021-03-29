@@ -1,7 +1,7 @@
 use std::ffi::CString;
 
 extern crate gl;
-use gl::types::{GLenum, GLchar};
+use gl::types::{GLchar, GLenum};
 
 extern crate image;
 
@@ -10,73 +10,209 @@ pub fn get_error() -> GLenum {
     return unsafe { gl::GetError() };
 }
 
-/// Creates a shader object on the GPU
-/// # Arguments
-/// * `kind` - The kind of shader to generate
-pub fn create_shader(kind: GLenum) -> Result<u32, String> {
-    let mut id = 0;
-    unsafe {
-        gl::CreateShader(kind);
-    };
+pub mod shader {
 
-    if id == 0 {
-        return Err("Shader could not be created".to_string());
-    } else {
-        return Ok(id);
+    use gl::types::{GLchar, GLenum};
+    use std::ffi::CString;
+
+    /// Create a shader using a string as the source code
+    /// # Arguments
+    /// `source` - The shader source code string
+    /// `kind` - The kind of shader to create
+    pub fn new_from_string(source: String, kind: GLenum) -> Result<u32, String> {
+        // Create a shader
+        let shader_id = create(kind)?;
+
+        // Compile the shader
+        compile(shader_id, source);
+
+        // Check if the shader compiled
+        let status = get_parameter(shader_id, gl::COMPILE_STATUS);
+
+        if status == 1 {
+            return Ok(shader_id);
+        } else {
+            return Err(get_info_log(shader_id));
+        }
+    }
+
+    /// Create a shader using a file as the source code
+    /// # Arguments
+    /// `path` - Path to the source code file
+    /// `kind` - The kind of shader to create
+    pub fn new_from_file(path: &str, kind: GLenum) -> Result<u32, String> {
+        // Read the source file in as a string
+        match std::fs::read_to_string(path) {
+            Ok(source) => new_from_string(source, kind),
+            Err(message) => Err(message.to_string()),
+        }
+    }
+
+    /// Creates a shader object on the GPU
+    /// # Arguments
+    /// * `kind` - The kind of shader to generate
+    fn create(kind: GLenum) -> Result<u32, String> {
+        let mut id = 0;
+        unsafe {
+            gl::CreateShader(kind);
+        };
+
+        if id == 0 {
+            return Err("Shader could not be created".to_string());
+        } else {
+            return Ok(id);
+        }
+    }
+
+    /// Compiles a shader program
+    /// # Arguments
+    /// * `id` - Shader Program ID
+    /// * `source` - Shader program source code
+    fn compile(id: u32, source: String) {
+        unsafe {
+            gl::ShaderSource(
+                id,
+                1,
+                &CString::new(source).unwrap().as_ptr(),
+                std::ptr::null(),
+            );
+            gl::CompileShader(id);
+        };
+    }
+
+    /// Get a shader parameter
+    /// # Arguments
+    /// `id` - Shader ID
+    /// `param` - The shader parameter to retrieve
+    fn get_parameter(id: u32, param: GLenum) -> i32 {
+        let mut status: i32 = 0;
+        unsafe {
+            gl::GetShaderiv(id, param, &mut status);
+        };
+
+        status
+    }
+
+    /// Get a shader's info log
+    /// `id` - Shader ID
+    fn get_info_log(id: u32) -> String {
+        let log_length = get_parameter(id, gl::INFO_LOG_LENGTH);
+
+        let log: CString = {
+            let mut buffer: Vec<u8> = Vec::with_capacity(log_length as usize + 1);
+            buffer.extend([b' '].iter().cycle().take(log_length as usize));
+            unsafe { CString::from_vec_unchecked(buffer) }
+        };
+
+        unsafe {
+            gl::GetShaderInfoLog(
+                id,
+                log_length,
+                std::ptr::null_mut(),
+                log.as_ptr() as *mut GLchar,
+            );
+        };
+
+        log.to_string_lossy().into_owned()
     }
 }
 
-/// Compiles a shader program
-/// # Arguments
-/// * `id` - Shader Program ID
-/// * `source` - Shader program source code
-pub fn compile_shader(id: u32, source: String) {
-    unsafe {
-        gl::ShaderSource(
-            id,
-            1,
-            &CString::new(source).unwrap().as_ptr(),
-            std::ptr::null(),
-        );
-        gl::CompileShader(id);
-    };
-}
+pub mod program {
+    use gl::types::{GLchar, GLenum};
+    use std::ffi::CString;
 
-/// Get a shader parameter
-/// # Arguments
-/// `id` - Shader Program ID
-/// `param` - The shader parameter to retrieve
-pub fn get_shader_parameter(id: u32, param: GLenum) -> i32 {
-    let mut status: i32 = 0;
-    unsafe {
-        gl::GetShaderiv(id, param, &mut status);
-    };
+    /// Set a shader program as used
+    /// # Arugments
+    /// * `id` - Shader Program ID
+    pub fn set_used(id: u32) {
+        unsafe {
+            gl::UseProgram(id);
+        }
+    }
 
-    status
-}
+    /// Create a program object on the GPU
+    fn create() -> u32 {
+        unsafe { gl::CreateProgram() }
+    }
 
-pub fn get_shader_info_log(id: u32) -> String {
-    let log_length = get_shader_parameter(id, gl::INFO_LOG_LENGTH);
+    /// Attach a shader to a program object
+    /// # Arguments
+    /// `program` - The id of the program to attach the shader to
+    /// `shaders` - The ids of the shaders to attach to the program
+    pub fn attach_shaders(program: u32, shaders: Vec<u32>) {
+        for shader in shaders {
+            unsafe { gl::AttachShader(program, shader) };
+        }
+    }
 
-    let log: CString = {
-        let mut buffer: Vec<u8> = Vec::with_capacity(log_length as usize + 1);
-        buffer.extend([b' '].iter().cycle().take(log_length as usize));
-        unsafe { CString::from_vec_unchecked(buffer) }
-    };
+    /// Detach shaders from a program
+    /// # Arguments
+    /// `program` - id of the program to attach the shader to
+    /// `shaders` - ids of the shaders to attach to the program
+    pub fn detach_shaders(program: u32, shaders: Vec<u32>) {
+        for shader in shaders {
+            unsafe { gl::DetachShader(program, shader) };
+        }
+    }
 
-    unsafe {
-        gl::GetShaderInfoLog(id, log_length, std::ptr::null_mut(), log.as_ptr() as *mut GLchar);
-    };
+    /// Link a program
+    /// # Arguments
+    /// `program` - id of the program to link
+    pub fn link(program: u32) -> Result<(), String> {
+        unsafe {
+            gl::LinkProgram(program);
+        };
 
-    log.to_string_lossy().into_owned()
-}
+        let link_status = get_parameter(program, gl::LINK_STATUS);
 
-/// Set a shader program as used
-/// # Arugments
-/// * `id` - Shader Program ID
-pub fn use_program(id: u32) {
-    unsafe {
-        gl::UseProgram(id);
+        if link_status == 1 {
+            Ok(())
+        } else {
+            Err(get_info_log(program))
+        }
+    }
+
+    /// Deletes a program object
+    /// # Arguments
+    /// `program` - id of the program to delete
+    pub fn delete(program: u32) {
+        unsafe { gl::DeleteProgram(program) };
+    }
+
+    /// Get a program parameter
+    /// # Arguments
+    /// `id` - id of the program
+    /// `param` - the program parameter to retrieve
+    fn get_parameter(id: u32, param: GLenum) -> i32 {
+        let mut status: i32 = 0;
+        unsafe {
+            gl::GetProgramiv(id, param, &mut status);
+        };
+
+        status
+    }
+
+    /// Get a programs's info log
+    /// `id` - id of the program
+    fn get_info_log(id: u32) -> String {
+        let log_length = get_parameter(id, gl::INFO_LOG_LENGTH);
+
+        let log: CString = {
+            let mut buffer: Vec<u8> = Vec::with_capacity(log_length as usize + 1);
+            buffer.extend([b' '].iter().cycle().take(log_length as usize));
+            unsafe { CString::from_vec_unchecked(buffer) }
+        };
+
+        unsafe {
+            gl::GetProgramInfoLog(
+                id,
+                log_length,
+                std::ptr::null_mut(),
+                log.as_ptr() as *mut GLchar,
+            );
+        };
+
+        log.to_string_lossy().into_owned()
     }
 }
 
