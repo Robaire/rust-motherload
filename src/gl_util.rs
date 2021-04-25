@@ -136,7 +136,7 @@ pub mod program {
     }
 
     /// Create a program object on the GPU
-    fn create() -> u32 {
+    pub fn create() -> u32 {
         unsafe { gl::CreateProgram() }
     }
 
