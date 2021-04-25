@@ -1,3 +1,9 @@
+#[macro_use]
+extern crate log;
+extern crate simplelog;
+use simplelog::*;
+use std::fs::File;
+
 extern crate gl;
 
 extern crate sdl2;
@@ -13,10 +19,25 @@ use rand::{Rng, SeedableRng};
 use std::cell::{Cell, RefCell};
 
 pub mod gl_util;
-pub mod shader;
 pub mod text;
 
 fn main() {
+    // Setup logging
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            File::create("rust-motherload.log").unwrap(),
+        ),
+    ])
+    .unwrap();
+
     let initial_window_size = 0.5;
 
     // Initialize SDL and create a window
@@ -73,6 +94,35 @@ fn main() {
         gl::load_with(|s| video_subsystem.gl_get_proc_address(s) as *const std::ffi::c_void);
 
         (sdl_context, window, gl_context, video_subsystem)
+    };
+
+    // Create the shaders and program objects
+    let game_program = {
+        let vertex =
+            gl_util::shader::new_from_file("./src/shaders/game.vert", gl::VERTEX_SHADER).unwrap();
+        let fragment =
+            gl_util::shader::new_from_file("./src/shaders/game.frag", gl::FRAGMENT_SHADER).unwrap();
+
+        let program = gl_util::program::create();
+
+        gl_util::program::attach_shaders(program, vec![vertex, fragment]);
+        gl_util::program::link(program).unwrap();
+
+        program
+    };
+
+    let text_program = {
+        let vertex =
+            gl_util::shader::new_from_file("./src/shaders/text.vert", gl::VERTEX_SHADER).unwrap();
+        let fragment =
+            gl_util::shader::new_from_file("./src/shaders/text.frag", gl::FRAGMENT_SHADER).unwrap();
+
+        let program = gl_util::program::create();
+
+        gl_util::program::attach_shaders(program, vec![vertex, fragment]);
+        gl_util::program::link(program).unwrap();
+
+        program
     };
 
     #[derive(Eq, PartialEq, Hash)]
@@ -314,12 +364,10 @@ fn main() {
         print_world();
 
         // Draw the new state to the screen
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
+        gl_util::clear();
 
         // Swap the buffers
-        window.gl_swap_window(); // This might wait in order to synchronize with the display refresh rate!!!!
+        window.gl_swap_window(); // This might block in order to synchronize with the display refresh rate!!!!
 
         let sleep_time = std::time::Duration::from_millis(5);
         std::thread::sleep(sleep_time);
