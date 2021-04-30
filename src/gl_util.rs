@@ -1,7 +1,7 @@
 use std::ffi::CString;
 
 extern crate gl;
-use gl::types::{GLenum};
+use gl::types::GLenum;
 
 extern crate image;
 
@@ -57,9 +57,9 @@ pub mod shader {
     /// # Arguments
     /// * `kind` - The kind of shader to generate
     fn create(kind: GLenum) -> Result<u32, String> {
-        let mut id = 0;
+        let id;
         unsafe {
-            gl::CreateShader(kind);
+            id = gl::CreateShader(kind);
         };
 
         if id == 0 {
