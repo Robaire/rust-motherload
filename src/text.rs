@@ -1,8 +1,8 @@
 extern crate freetype;
 extern crate sdl2;
 
-use std::collections::HashMap;
 use super::gl_util;
+use std::collections::HashMap;
 
 pub struct Glyph {
     buffer_id: u32, // ID of the texture buffer containing this character
