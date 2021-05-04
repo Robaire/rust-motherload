@@ -38,7 +38,7 @@ fn main() {
     ])
     .unwrap();
 
-    let initial_window_size = 0.5;
+    let initial_window_size = 0.3;
 
     // Initialize SDL and create a window
     let (sdl_context, window, _gl_context, _video_subsystem) = {
@@ -111,19 +111,19 @@ fn main() {
         program
     };
 
-    // let text_program = {
-    //     let vertex =
-    //         gl_util::shader::new_from_file("./src/shaders/text.vert", gl::VERTEX_SHADER).unwrap();
-    //     let fragment =
-    //         gl_util::shader::new_from_file("./src/shaders/text.frag", gl::FRAGMENT_SHADER).unwrap();
+    let text_program = {
+        let vertex =
+            gl_util::shader::new_from_file("./src/shaders/text.vert", gl::VERTEX_SHADER).unwrap();
+        let fragment =
+            gl_util::shader::new_from_file("./src/shaders/text.frag", gl::FRAGMENT_SHADER).unwrap();
 
-    //     let program = gl_util::program::create();
+        let program = gl_util::program::create();
 
-    //     gl_util::program::attach_shaders(program, vec![vertex, fragment]);
-    //     gl_util::program::link(program).unwrap();
+        gl_util::program::attach_shaders(program, vec![vertex, fragment]);
+        gl_util::program::link(program).unwrap();
 
-    //     program
-    // };
+        program
+    };
 
     #[derive(Eq, PartialEq, Hash)]
     enum Command {
