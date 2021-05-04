@@ -2,6 +2,10 @@
 
 precision mediump float;
 
+uniform sampler2D texture_sampler;
+
+in vec2 texture_coordinate;
+
 out vec4 Color;
 
 void main() {
