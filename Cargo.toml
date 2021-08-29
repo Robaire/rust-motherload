@@ -15,4 +15,5 @@ rand = { version = "^0.8.0", features = ["small_rng"] }
 image = "^0.23.0"
 nalgebra = "^0.25.0"
 freetype-rs = "^0.27.0"
+gl_util = { git = "https://github.com/Robaire/gl-util-rs", branch = "main" }
 
